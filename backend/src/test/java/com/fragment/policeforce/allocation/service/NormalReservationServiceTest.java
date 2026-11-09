@@ -37,7 +37,7 @@ class NormalAllocationServiceTest {
     void shouldCreateAllocationSynchronously() {
         PoliceStation station = new PoliceStation();
         station.setId(1L);
-        station.setStationName("实验室");
+        station.setStationName("城东分局");
         DutySlot slot = new DutySlot();
         slot.setId(10L);
         slot.setStationId(1L);

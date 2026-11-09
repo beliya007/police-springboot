@@ -10,8 +10,7 @@ import lombok.Data;
 /**
  * 警局表。
  *
- * <p>对应开源项目的 {@code resource} 表，语义从「实验室公共资源」改为「公安机关警局」。
- * 警局是配置人数、效能计算与警力调配三个域的聚合根。</p>
+ * <p>警局是配置人数、效能计算与警力调配三个域的聚合根。</p>
  */
 @TableName(value = "police_station")
 @Data

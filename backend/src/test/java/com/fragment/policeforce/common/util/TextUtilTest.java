@@ -11,6 +11,6 @@ class TextUtilTest {
     void shouldTrimTextAndNormalizeBlankValuesToNull() {
         assertNull(TextUtil.trimToNull(null));
         assertNull(TextUtil.trimToNull("   "));
-        assertEquals("深圳实验室", TextUtil.trimToNull("  深圳实验室  "));
+        assertEquals("深圳巡防中队", TextUtil.trimToNull("  深圳巡防中队  "));
     }
 }

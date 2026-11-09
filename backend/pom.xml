@@ -9,10 +9,10 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.fragment</groupId>
-    <artifactId>lab-station-booking</artifactId>
+    <artifactId>police-force-compliance</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>lab-station-booking</name>
-    <description>lab-station-booking</description>
+    <name>police-force-compliance</name>
+    <description>警力合理配置规划平台</description>
     <url/>
     <licenses>
         <license/>

@@ -8,7 +8,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @SpringBootTest
-class LabStationBookingApplicationTests {
+class PoliceForceComplianceApplicationTests {
 
     // Verify application wiring without requiring an external Redis instance.
     @MockitoBean

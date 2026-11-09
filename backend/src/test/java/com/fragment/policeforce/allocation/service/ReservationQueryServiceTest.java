@@ -33,9 +33,9 @@ class ReservationQueryServiceTest {
         allocation.setUserId(7L);
         allocation.setStationId(20L);
         allocation.setSlotId(10L);
-        allocation.setStationName("预约时的雷达调试台");
-        allocation.setStationCode("RADAR-01");
-        allocation.setStationLocation("实验室 A");
+        allocation.setStationName("预约时的巡防执勤点");
+        allocation.setStationCode("PATROL-01");
+        allocation.setStationLocation("城东分局 A 座");
         allocation.setSlotStartDatetime(start);
         allocation.setSlotEndDatetime(start.plusHours(2));
 
@@ -48,8 +48,8 @@ class ReservationQueryServiceTest {
 
         AllocationVO view = queryService.listByUserId(7L).get(0);
 
-        assertThat(view.getStationName()).isEqualTo("预约时的雷达调试台");
-        assertThat(view.getLocation()).isEqualTo("实验室 A");
+        assertThat(view.getStationName()).isEqualTo("预约时的巡防执勤点");
+        assertThat(view.getLocation()).isEqualTo("城东分局 A 座");
         assertThat(view.getStartDatetime()).isEqualTo(start);
         assertThat(view.getEndDatetime()).isEqualTo(start.plusHours(2));
         assertThat(view.getUserNickname()).isEqualTo("测试用户");

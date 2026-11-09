@@ -58,7 +58,7 @@ class ResourceServiceImplTest {
     void unfilteredSearchUsesOnlyTheHomeCatalogCache() {
         PoliceStationVO cached = new PoliceStationVO();
         cached.setId(1L);
-        cached.setStationName("雷达站");
+        cached.setStationName("城东巡防站");
         when(resourceCatalogCache.getHomeStationList(any())).thenReturn(List.of(cached));
 
         List<PoliceStationVO> result = policeStationService.search(new PoliceStationQueryDTO());
@@ -71,11 +71,11 @@ class ResourceServiceImplTest {
     @Test
     void filteredSearchBypassesTheHomeCatalogCache() {
         PoliceStationQueryDTO query = new PoliceStationQueryDTO();
-        query.setName("雷达");
+        query.setName("巡防");
         PoliceStation station = new PoliceStation();
         station.setId(2L);
-        station.setStationCode("RM-RADAR");
-        station.setStationName("雷达站");
+        station.setStationCode("RM-PATROL");
+        station.setStationName("城东巡防站");
         station.setStationType("FIELD");
         station.setStatus("AVAILABLE");
         when(policeStationMapper.selectList(any())).thenReturn(List.of(station));
