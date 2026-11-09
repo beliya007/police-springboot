@@ -1,0 +1,282 @@
+server:
+  port: ${SERVER_PORT:8081}
+
+spring:
+  datasource:
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/police_force?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8}
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:}
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      database: ${REDIS_DATABASE:0}
+      timeout: 3000ms
+  cloud:
+    function:
+      definition: reservationDelayConsumer;adminAuditConsumer;allocationCommandConsumer;allocationResultConsumer;examCommandConsumer;examResultConsumer;examWaitingConsumer;recalcShardConsumer
+    stream:
+      rocketmq:
+        binder:
+          name-server: ${ROCKETMQ_NAMESERVER:127.0.0.1:9876}
+        bindings:
+          reservationDelayConsumer-in-0:
+            consumer:
+              subscription: '*'
+              push:
+                max-reconsume-times: ${app.message-outbox.max-reconsume-times:-1}
+          adminAuditConsumer-in-0:
+            consumer:
+              subscription: admin-audit
+              push:
+                max-reconsume-times: ${app.audit.mq.max-reconsume-times:-1}
+          allocationCommandConsumer-in-0:
+            consumer:
+              subscription: CREATE
+              message-model: CLUSTERING
+              push:
+                max-reconsume-times: ${app.allocation.command.max-reconsume-times:16}
+          allocationResultConsumer-in-0:
+            consumer:
+              subscription: RESULT
+              message-model: CLUSTERING
+              push:
+                max-reconsume-times: ${app.allocation.command.max-reconsume-times:16}
+          examCommandConsumer-in-0:
+            consumer:
+              subscription: CREATE
+              message-model: CLUSTERING
+              push:
+                max-reconsume-times: ${app.exam.command.max-reconsume-times:16}
+          examResultConsumer-in-0:
+            consumer:
+              subscription: RESULT
+              message-model: CLUSTERING
+              push:
+                max-reconsume-times: ${app.exam.command.max-reconsume-times:16}
+          examWaitingConsumer-in-0:
+            consumer:
+              subscription: PROMOTE
+              message-model: CLUSTERING
+              push:
+                max-reconsume-times: ${app.exam.waiting.max-reconsume-times:8}
+          recalcShardConsumer-in-0:
+            consumer:
+              subscription: SHARD
+              message-model: CLUSTERING
+              push:
+                max-reconsume-times: ${app.efficiency.command.max-reconsume-times:16}
+          reservationDelay-out-0:
+            producer:
+              group: ${app.message-outbox.producer-group:police-force-outbox-producer-group}
+          adminAudit-out-0:
+            producer:
+              group: ${app.message-outbox.producer-group:police-force-outbox-producer-group}
+          allocationCommand-out-0:
+            producer:
+              group: ${app.allocation.command.producer-group:allocation-command-producer-group}
+              producer-type: Trans
+              transaction-listener: reservationTransactionListener
+              send-type: Sync
+              send-msg-timeout: ${app.allocation.command.send-timeout-millis:3000}
+              retry-times-when-send-failed: ${app.allocation.command.send-retry-times:2}
+          allocationResult-out-0:
+            producer:
+              group: ${app.message-outbox.producer-group:police-force-outbox-producer-group}
+          examCommand-out-0:
+            producer:
+              group: ${app.exam.command.producer-group:exam-command-producer-group}
+              producer-type: Trans
+              transaction-listener: examTransactionListener
+              send-type: Sync
+              send-msg-timeout: ${app.exam.command.send-timeout-millis:3000}
+              retry-times-when-send-failed: ${app.exam.command.send-retry-times:2}
+          examResult-out-0:
+            producer:
+              group: ${app.message-outbox.producer-group:police-force-outbox-producer-group}
+          examWaiting-out-0:
+            producer:
+              group: ${app.message-outbox.producer-group:police-force-outbox-producer-group}
+          recalcShard-out-0:
+            producer:
+              group: ${app.efficiency.command.producer-group:efficiency-recalc-producer-group}
+      bindings:
+        reservationDelayConsumer-in-0:
+          destination: ${app.message-outbox.delay-topic:allocation-delay}
+          group: ${app.message-outbox.delay-consumer-group:allocation-delay-consumer-group}
+          content-type: application/json
+          consumer:
+            auto-startup: ${app.message-outbox.enabled:false}
+        adminAuditConsumer-in-0:
+          destination: ${app.audit.mq.topic:admin-audit-log}
+          group: ${app.audit.mq.consumer-group:admin-audit-consumer-group}
+          content-type: application/json
+          consumer:
+            auto-startup: ${app.audit.mq.enabled:false}
+        allocationCommandConsumer-in-0:
+          destination: ${app.allocation.command.topic:allocation-command}
+          group: ${app.allocation.command.consumer-group:allocation-confirm-group}
+          content-type: application/json
+          consumer:
+            auto-startup: ${app.allocation.command.consumer-enabled:${app.allocation.command.enabled:false}}
+            concurrency: ${app.allocation.command.consumer-concurrency:4}
+        allocationResultConsumer-in-0:
+          destination: ${app.allocation.command.result-topic:allocation-result}
+          group: ${app.allocation.command.result-consumer-group:allocation-result-group}
+          content-type: application/json
+          consumer:
+            auto-startup: ${app.allocation.command.enabled:false}
+            concurrency: ${app.allocation.command.result-consumer-concurrency:2}
+        examCommandConsumer-in-0:
+          destination: ${app.exam.command.topic:exam-command}
+          group: ${app.exam.command.consumer-group:exam-confirm-group}
+          content-type: application/json
+          consumer:
+            auto-startup: ${app.exam.command.consumer-enabled:${app.exam.command.enabled:false}}
+            concurrency: ${app.exam.command.consumer-concurrency:8}
+        examResultConsumer-in-0:
+          destination: ${app.exam.command.result-topic:exam-result}
+          group: ${app.exam.command.result-consumer-group:exam-result-group}
+          content-type: application/json
+          consumer:
+            auto-startup: ${app.exam.command.enabled:false}
+            concurrency: ${app.exam.command.result-consumer-concurrency:2}
+        examWaitingConsumer-in-0:
+          destination: ${app.exam.waiting.topic:exam-waiting}
+          group: ${app.exam.waiting.consumer-group:exam-waiting-group}
+          content-type: application/json
+          consumer:
+            auto-startup: ${app.exam.waiting.enabled:false}
+            concurrency: ${app.exam.waiting.consumer-concurrency:2}
+        recalcShardConsumer-in-0:
+          destination: ${app.efficiency.command.topic:efficiency-recalc}
+          group: ${app.efficiency.command.consumer-group:efficiency-recalc-group}
+          content-type: application/json
+          consumer:
+            auto-startup: ${app.efficiency.command.enabled:false}
+            concurrency: ${app.efficiency.command.consumer-concurrency:4}
+        reservationDelay-out-0:
+          destination: ${app.message-outbox.delay-topic:allocation-delay}
+          content-type: application/json
+        adminAudit-out-0:
+          destination: ${app.audit.mq.topic:admin-audit-log}
+          content-type: application/json
+        allocationCommand-out-0:
+          destination: ${app.allocation.command.topic:allocation-command}
+          content-type: application/json
+        allocationResult-out-0:
+          destination: ${app.allocation.command.result-topic:allocation-result}
+          content-type: application/json
+        examCommand-out-0:
+          destination: ${app.exam.command.topic:exam-command}
+          content-type: application/json
+        examResult-out-0:
+          destination: ${app.exam.command.result-topic:exam-result}
+          content-type: application/json
+        examWaiting-out-0:
+          destination: ${app.exam.waiting.topic:exam-waiting}
+          content-type: application/json
+        recalcShard-out-0:
+          destination: ${app.efficiency.command.topic:efficiency-recalc}
+          content-type: application/json
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:local-development-secret-change-before-production}
+    expire-hours: 24
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://127.0.0.1:5173,http://localhost:5173}
+  allocation:
+    hot-redis-enabled: false
+    hot-cache-retention-hours: 24
+    hot-request-retention-hours: 24
+    command:
+      enabled: false
+      consumer-enabled: false
+      topic: allocation-command
+      result-topic: allocation-result
+      producer-group: allocation-command-producer-group
+      consumer-group: allocation-confirm-group
+      result-consumer-group: allocation-result-group
+      send-timeout-millis: 3000
+      send-retry-times: 2
+      max-reconsume-times: 16
+      consumer-concurrency: 4
+      result-consumer-concurrency: 2
+    rate-limit:
+      enabled: false
+      normal-max-requests: 5
+      normal-window-seconds: 10
+      hot-max-requests: 3
+      hot-window-seconds: 10
+    reminder:
+      enabled: true
+      before-start-minutes: 10
+    auto-cancel:
+      enabled: true
+      grace-minutes: 15
+      check-in-before-start-minutes: 30
+  exam:
+    hot-redis-enabled: false
+    hot-cache-retention-hours: 24
+    hot-request-retention-hours: 24
+    command:
+      enabled: false
+      consumer-enabled: false
+      topic: exam-command
+      result-topic: exam-result
+      producer-group: exam-command-producer-group
+      consumer-group: exam-confirm-group
+      result-consumer-group: exam-result-group
+      send-timeout-millis: 3000
+      send-retry-times: 2
+      max-reconsume-times: 16
+      consumer-concurrency: 8
+      result-consumer-concurrency: 2
+    waiting:
+      enabled: false
+      topic: exam-waiting
+      consumer-group: exam-waiting-group
+      consumer-concurrency: 2
+      max-reconsume-times: 8
+      delay-seconds: 5
+  efficiency:
+    command:
+      enabled: false
+      topic: efficiency-recalc
+      result-topic: efficiency-result
+      producer-group: efficiency-recalc-producer-group
+      consumer-group: efficiency-recalc-group
+      max-reconsume-times: 16
+      consumer-concurrency: 4
+      # 一个分片覆盖多少个警局。分片越大 → 扫描次数越少、单片耗时越长。
+      shard-size: ${EFFICIENCY_SHARD_SIZE:20}
+      # 单批次最大分片数，防止警局数量失控时打满 MQ。
+      max-shards: ${EFFICIENCY_MAX_SHARDS:64}
+  message-outbox:
+    enabled: false
+    producer-group: police-force-outbox-producer-group
+    max-reconsume-times: -1
+    lock-seconds: 60
+    delay-topic: allocation-delay
+    delay-consumer-group: allocation-delay-consumer-group
+    outbox:
+      dispatch-delay-millis: 1000
+      batch-size: 20
+      max-retry-count: 10
+      initial-retry-delay-millis: 1000
+      max-retry-delay-millis: 300000
+  audit:
+    enabled: true
+    mq:
+      enabled: false
+      topic: admin-audit-log
+      consumer-group: admin-audit-consumer-group
+      max-reconsume-times: -1
+  station-cache:
+    enabled: ${RESOURCE_CACHE_ENABLED:false}
+    ttl-seconds: ${RESOURCE_CACHE_TTL_SECONDS:300}
+    double-delete-delay-millis: ${RESOURCE_CACHE_DOUBLE_DELETE_DELAY_MILLIS:500}

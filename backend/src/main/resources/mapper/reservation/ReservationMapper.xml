@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fragment.policeforce.allocation.persistence.AllocationMapper">
+
+    <!--
+        INSERT IGNORE 借助 uk_allocation_officer_slot_active 唯一键实现「一名警员同一时段只被派出一次」。
+        插入被忽略时，调用方再查一次来判断是「警员重复」还是「预约号碰撞」。
+    -->
+    <insert id="insertIgnore" useGeneratedKeys="true" keyProperty="allocation.id">
+        INSERT IGNORE INTO allocation_assignment (
+            allocation_no, user_id, officer_id, station_id, slot_id,
+            station_name, station_code, station_location,
+            slot_start_datetime, slot_end_datetime, checked_in_at,
+            auto_cancel_deadline, is_active, status, source_type,
+            cancel_reason, created_at, updated_at
+        ) VALUES (
+            #{allocation.allocationNo}, #{allocation.userId}, #{allocation.officerId},
+            #{allocation.stationId}, #{allocation.slotId},
+            #{allocation.stationName}, #{allocation.stationCode},
+            #{allocation.stationLocation}, #{allocation.slotStartDatetime},
+            #{allocation.slotEndDatetime}, #{allocation.checkedInAt},
+            #{allocation.autoCancelDeadline}, #{allocation.isActive},
+            #{allocation.status}, #{allocation.sourceType},
+            #{allocation.cancelReason}, NOW(), NOW()
+        )
+    </insert>
+</mapper>

@@ -1,0 +1,21 @@
+app:
+  allocation:
+    hot-redis-enabled: true
+    command:
+      enabled: true
+      consumer-enabled: true
+  exam:
+    hot-redis-enabled: true
+    command:
+      enabled: true
+      consumer-enabled: true
+    waiting:
+      enabled: true
+  efficiency:
+    command:
+      enabled: true
+  message-outbox:
+    enabled: true
+  audit:
+    mq:
+      enabled: true

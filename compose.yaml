@@ -1,0 +1,92 @@
+name: police-force-compliance
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-police_force}
+      MYSQL_USER: ${MYSQL_USER:-police_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-police_password_change_me}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password_change_me}
+      TZ: Asia/Shanghai
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./backend/src/main/resources/sql/police-force-init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  rocketmq-namesrv:
+    image: apache/rocketmq:4.9.8
+    command: sh mqnamesrv
+    ports:
+      - "${ROCKETMQ_NAMESRV_PORT:-9876}:9876"
+
+  rocketmq-broker:
+    image: apache/rocketmq:4.9.8
+    command: sh mqbroker -n rocketmq-namesrv:9876 -c /home/rocketmq/rocketmq-4.9.8/conf/broker.conf
+    depends_on:
+      rocketmq-namesrv:
+        condition: service_started
+    ports:
+      - "${ROCKETMQ_BROKER_PORT:-10911}:10911"
+    volumes:
+      - ./docker/rocketmq/broker.conf:/home/rocketmq/rocketmq-4.9.8/conf/broker.conf:ro
+      - rocketmq-store:/home/rocketmq/store
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      SPRING_PROFILES_ACTIVE: mq
+      SERVER_PORT: 8081
+      MYSQL_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-police_force}?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8
+      MYSQL_USERNAME: ${MYSQL_USER:-police_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-police_password_change_me}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      ROCKETMQ_NAMESERVER: rocketmq-namesrv:9876
+      JWT_SECRET: ${JWT_SECRET:-replace-with-at-least-32-random-characters}
+      RESOURCE_CACHE_ENABLED: ${RESOURCE_CACHE_ENABLED:-true}
+      # 效能重算分片大小：分片越大 → 全表扫描次数越少、单片耗时越长
+      EFFICIENCY_SHARD_SIZE: ${EFFICIENCY_SHARD_SIZE:-20}
+      # 单批次最大分片数，防止警局数量失控时把 MQ 打满
+      EFFICIENCY_MAX_SHARDS: ${EFFICIENCY_MAX_SHARDS:-64}
+    ports:
+      - "${BACKEND_PORT:-8081}:8081"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rocketmq-broker:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/system/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+
+volumes:
+  mysql-data:
+  redis-data:
+  rocketmq-store:
